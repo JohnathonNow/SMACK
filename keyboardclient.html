@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <title>WebSocket Keyboard V1.0</title>
+  <meta charset="UTF-8" />
+  <script>
+    "use strict";
+    window.addEventListener("load", 
+        function(event)
+        {
+            var serverURL = document.getElementById("url");
+            var open = document.getElementById("open");
+            var text = document.getElementById("text");
+            var gSocket;
+
+            serverURL.value = "ws://192.168.1.11:8080";
+
+            var lastLength = 0;
+
+            text.addEventListener("keydown", 
+                function(event) 
+                {
+                    //console.log(event);
+                    var curLength = text.value.length;
+                    if (curLength < lastLength)
+                    {
+                        sendKey(gSocket, lastLength - curLength, "back");
+                    }
+                    else if (curLength > lastLength)
+                    {
+                        sendKey(gSocket, text.value.substring(curLength-(curLength - lastLength)), "type");
+                    }
+                    lastLength = curLength;
+                });
+
+            // Create a new connection when the Connect button is clicked
+            open.addEventListener("click", 
+                function(event)
+                {
+                    gSocket = new WebSocket(serverURL.value, "keyboard");
+                });
+        });
+    function sendKey(socket, id, type)
+    {
+        console.log(id);
+        var toSend = {
+            id: id,
+            type: type,
+        };
+        socket.send(JSON.stringify(toSend));
+    }
+  </script>
+</head>
+<body>
+  URL: <input id="url" /><br />
+  <input id="open" type="button" value="Connect" />&nbsp;
+  <input id="text" /><br />
+</body>
+</html>
