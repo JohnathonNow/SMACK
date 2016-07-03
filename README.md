@@ -10,7 +10,6 @@ Dependencies:
   
 Todo:
 ------------
-  - Implement autocorrect  
   - Implement more special keys, such as modifiers and enter  
   - Make more secure
   - Make look pretty  

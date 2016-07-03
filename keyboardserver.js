@@ -4,7 +4,7 @@ var WebSocketServer = require('websocket').server; // the WebSocketServer that w
 var http = require('http');
 
 var server = http.createServer();
-server.listen(8080);
+server.listen(34607);
 
 var wsServer = new WebSocketServer({
     httpServer: server,
@@ -37,9 +37,24 @@ wsServer.on('request',
                 {
                     case "back":
                         for (var i = 0; i < dataIn.id; i++)
+                        {
                             robot.keyTap("backspace");
+                        }
+                    break;
+                    case "enter":
+                        for (var i = 0; i < dataIn.id; i++)
+                        {
+                            robot.keyTap("enter");
+                        }
                     break;
                     case "type":
+                        robot.typeString(dataIn.id);
+                    break;
+                    case "replace":
+                        for (var i = 0; i < dataIn.count; i++)
+                        {
+                            robot.keyTap("backspace");
+                        }
                         robot.typeString(dataIn.id);
                     break;
                 }
