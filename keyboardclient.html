@@ -1,59 +1,104 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <title>WebSocket Keyboard V1.0</title>
+  <title>WebSocket Keyboard V1.2</title>
   <meta charset="UTF-8" />
   <script>
     "use strict";
+    const PORT = 34607; // the port we will try to connect to
     window.addEventListener("load", 
         function(event)
         {
-            var serverURL = document.getElementById("url");
-            var open = document.getElementById("open");
-            var text = document.getElementById("text");
-            var gSocket;
+            var serverURL = document.getElementById("url"); // the url for the server as set by the url text box
+            var open = document.getElementById("open"); // the open button
+            var clear = document.getElementById("clear"); // the clear button
+            var text = document.getElementById("text"); // the keyboard input text box
+            var gSocket; // the WebSocket for communicating with the server
 
-            serverURL.value = "ws://192.168.1.11:8080";
+            serverURL.value = "192.168.1.23"; // default ip
 
-            var lastLength = 0;
-
-            text.addEventListener("keydown", 
-                function(event) 
+            var lastLength = 0; // store the last length of the string - for correction
+            var lastText = ""; // store the last string - for correction
+            
+            var onchange = function(event) 
                 {
-                    //console.log(event);
                     var curLength = text.value.length;
-                    if (curLength < lastLength)
+                    // first find where things changed
+                    var i = 0;
+                    while ( (i < curLength) && (i < lastLength) && (text.value[i] == lastText[i]) )
                     {
-                        sendKey(gSocket, lastLength - curLength, "back");
+                        i += 1;
                     }
-                    else if (curLength > lastLength)
-                    {
-                        sendKey(gSocket, text.value.substring(curLength-(curLength - lastLength)), "type");
-                    }
-                    lastLength = curLength;
-                });
-
+                    // changes will be non-negative
+                    // the server will send changes backspaces
+                    // followed by everything that has been typed after the change
+                    var changes = lastLength - i;
+                    // then we send the changes
+                    sendCorrection(gSocket, text.value.substring(i), changes); // send what we gained
+                    lastLength = curLength; // update our previous length
+                    lastText = text.value; // update our previous string
+                }
+            
+            // update on both keyup (for regular typing) and TextEvent (for completion)
+            // input seems to handle all of these and paste on Android, but the others are left
+            // in until I can test it on other platforms
+            text.addEventListener("keyup",onchange);
+            text.addEventListener("TextEvent",onchange);
+            text.addEventListener("input",onchange);
+            
             // Create a new connection when the Connect button is clicked
-            open.addEventListener("click", 
+            open.addEventListener("mousedown", 
                 function(event)
                 {
-                    gSocket = new WebSocket(serverURL.value, "keyboard");
+                    gSocket = new WebSocket("ws://"+serverURL.value+":"+PORT, "keyboard");
+                    // prevent the button from taking focus
+                    event.preventDefault();
+                });
+            // Clear the textarea when we click CLEAR
+            clear.addEventListener("mousedown", 
+                function(event)
+                {
+                    // clear the contents of the area as well as our memory about it
+                    lastText = "";
+                    text.value = "";
+                    lastLength = 0;
+                    // prevent the button from taking focus
+                    event.preventDefault();
                 });
         });
+    
+    // Send key commands to the server
+    // type is the type of command
+    //      "type" - the keyboard will type in the string contained in id (DEPRECATED - USE sendCorrection instead)
+    //      "back" - the keyboard will press backspace id times (DEPRECATED - USE sendCorrection instead)
+    //      "enter" - the keyboard will press enter id times (UNUSED)
     function sendKey(socket, id, type)
     {
-        console.log(id);
         var toSend = {
             id: id,
-            type: type,
+            type: type
+        };
+        socket.send(JSON.stringify(toSend));
+    }
+    
+    // Send correction commands to the server
+    // id is the string to type
+    // count is the number of backspaces to send
+    function sendCorrection(socket, id, count)
+    {
+        var toSend = {
+            id: id,
+            type: "replace",
+            count: count
         };
         socket.send(JSON.stringify(toSend));
     }
   </script>
 </head>
 <body>
-  URL: <input id="url" /><br />
-  <input id="open" type="button" value="Connect" />&nbsp;
-  <input id="text" /><br />
+  IP: <input id="url" />&nbsp;
+  <input id="open" type="button" value="Connect" /><br />
+  <textarea rows="4" cols="50" id="text"></textarea><br />
+  <input id="clear" type="button" value="CLEAR" /><br />
 </body>
 </html>
